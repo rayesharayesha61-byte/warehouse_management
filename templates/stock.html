@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management · Textile Warehouse</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+</head>
+<style>
+    /* ============ STOCK MANAGEMENT — PAGE STYLES ============ */
+
+    .table-product {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .table-product strong {
+        font-weight: 600;
+        color: #1a1a1a;
+        font-size: 13.5px;
+    }
+
+    .table-sub {
+        font-size: 11.5px;
+        color: #999;
+        display: block;
+        font-weight: 400;
+    }
+
+    .rack-pill {
+        display: inline-block;
+        background: #f4f6f9;
+        color: #555;
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.3px;
+    }
+
+    .adjust-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #1a1a1a;
+        color: white;
+        padding: 7px 12px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .adjust-btn:hover {
+        background: #000;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-sm {
+        max-width: 460px;
+    }
+
+    .stock-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f4f6f9;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 20px;
+    }
+
+    .stock-summary-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stock-summary-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a1a;
+        letter-spacing: -0.4px;
+    }
+
+    .stock-action-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+
+    .stock-action-option {
+        position: relative;
+        cursor: pointer;
+        display: block;
+    }
+
+    .stock-action-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .stock-action-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border: 1.5px solid #e2e5ea;
+        border-radius: 12px;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .stock-action-option:hover .stock-action-content {
+        border-color: #c9cfd6;
+        background: #fafbfc;
+    }
+
+    .stock-action-option input:checked + .stock-action-content {
+        border-color: #1a1a1a;
+        background: #fafbfc;
+        box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.06);
+    }
+
+    .stock-action-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stock-in-icon {
+        background: #e7f7ed;
+        color: #16803c;
+    }
+
+    .stock-out-icon {
+        background: #ffe5e5;
+        color: #c62828;
+    }
+
+    .stock-action-content > div:last-child {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.3;
+        min-width: 0;
+    }
+
+    .stock-action-content strong {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .stock-action-content span {
+        font-size: 11.5px;
+        color: #888;
+        margin-top: 2px;
+    }
+
+    @media (max-width: 900px) {
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2),
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            display: none;
+        }
+
+        .stock-action-group {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .data-table th,
+        .data-table td {
+            padding: 12px 10px;
+            font-size: 12.5px;
+        }
+
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            display: none;
+        }
+
+        .adjust-btn span {
+            display: none;
+        }
+
+        .adjust-btn {
+            padding: 8px;
+        }
+    }
+</style>
+<body>
+
+<!-- ============ SIDEBAR ============ -->
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+        <div class="logo-icon">TW</div>
+        <div class="brand-text">
+            <span class="brand-name">Textile Warehouse</span>
+            <span class="brand-sub">Management System</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+        <span class="nav-label">Main</span>
+
+        <a href="/dashboard" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9"/>
+                <rect x="14" y="3" width="7" height="5"/>
+                <rect x="14" y="12" width="7" height="9"/>
+                <rect x="3" y="16" width="7" height="5"/>
+            </svg>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="/products" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            <span>Products</span>
+        </a>
+
+        <a href="/stock-management" class="nav-link active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M20 7h-9"/>
+                <path d="M14 17H5"/>
+                <circle cx="17" cy="17" r="3"/>
+                <circle cx="7" cy="7" r="3"/>
+            </svg>
+            <span>Stock Management</span>
+        </a>
+
+        <a href="/suppliers" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>Suppliers</span>
+        </a>
+
+        <a href="/reports" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+                <line x1="9" y1="11" x2="13" y2="11"/>
+            </svg>
+            <span>Reports</span>
+        </a>
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="/logout" class="nav-link logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Logout</span>
+        </a>
+    </div>
+
+</aside>
+
+
+<!-- ============ MAIN CONTENT ============ -->
+
+<main class="main-content">
+
+    <header class="topbar">
+        <div class="topbar-left">
+            <h1>Stock Management</h1>
+            <p>Monitor stock levels and adjust quantities</p>
+        </div>
+
+        <div class="topbar-right">
+            <button class="icon-btn" aria-label="Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="dot"></span>
+            </button>
+        </div>
+    </header>
+
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+
+    <!-- ============ STAT CARDS ============ -->
+
+    <section class="stats">
+
+        <div class="stat-card">
+            <div class="stat-icon icon-blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                </svg>
+            </div>
+            <div class="stat-body">
+                <h3>Total Products</h3>
+                <h2>{{ products|length }}</h2>
+                <p>Items in inventory</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-green">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div class="stat-body">
+                <h3>Total Stock</h3>
+                <h2>{{ products|sum(attribute='quantity') }}</h2>
+                <p>Units on hand</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-orange">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <div class="stat-body">
+                <h3>Low Stock</h3>
+                <h2>
+                    {{ products|selectattr('quantity', 'le', 5)|list|length }}
+                </h2>
+                <p>Need restocking</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-red">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+            </div>
+            <div class="stat-body">
+                <h3>Out of Stock</h3>
+                <h2>
+                    {{ products|selectattr('quantity', 'equalto', 0)|list|length }}
+                </h2>
+                <p>Unavailable items</p>
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- ============ FILTER BAR ============ -->
+
+    <section class="filter-bar">
+
+        <div class="search-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text"
+                   id="searchBox"
+                   placeholder="Search by product name or rack...">
+        </div>
+
+        <select id="stockFilter" class="filter-select">
+            <option value="">All Stock</option>
+            <option value="available">Available</option>
+            <option value="low">Low Stock</option>
+            <option value="out">Out of Stock</option>
+        </select>
+
+    </section>
+
+
+    <!-- ============ STOCK TABLE ============ -->
+
+    <div class="table-wrapper">
+        <table class="data-table" id="stockTable">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Rack</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Adjust</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for product in products %}
+
+                <tr data-name="{{ product.productName|lower }}"
+                    data-rack="{{ product.rackNumber|lower }}"
+                    data-stock="{% if product.quantity == 0 %}out{% elif product.quantity <= product.minimumStock %}low{% else %}available{% endif %}">
+
+                    <td>
+                        <div class="table-product">
+                            <strong>{{ product.productName }}</strong>
+                            <span class="table-sub">{{ product.subCategory }}</span>
+                        </div>
+                    </td>
+
+                    <td>{{ product.category }}</td>
+
+                    <td>
+                        <span class="rack-pill">{{ product.rackNumber }}</span>
+                    </td>
+
+                    <td>₹{{ "%.2f"|format(product.price) }}</td>
+
+                    <td>
+                        <strong>{{ product.quantity }}</strong>
+                        <span class="table-sub">min {{ product.minimumStock }}</span>
+                    </td>
+
+                    <td>
+                        {% if product.quantity == 0 %}
+                            <span class="status out">Out</span>
+                        {% elif product.quantity <= product.minimumStock %}
+                            <span class="status low">Low</span>
+                        {% else %}
+                            <span class="status available">OK</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <button type="button"
+                                class="btn-small adjust-btn"
+                                data-id="{{ product.id }}"
+                                data-name="{{ product.productName }}"
+                                data-qty="{{ product.quantity }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round"
+                                 stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Adjust
+                        </button>
+                    </td>
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="7">
+                        <div class="empty" style="border: none; box-shadow: none;">
+                            <div class="empty-icon">
+                                <svg width="40" height="40" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor"
+                                     stroke-width="1.5" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                </svg>
+                            </div>
+                            <h3>No products in inventory</h3>
+                            <p>Add products first to manage stock.</p>
+                        </div>
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+
+<!-- ============================================================
+     STOCK ADJUST MODAL
+     ============================================================ -->
+
+<div class="modal-overlay" id="stockModal">
+    <div class="modal modal-sm" role="dialog" aria-modal="true"
+         aria-labelledby="stockModalTitle">
+
+        <div class="modal-header">
+            <div>
+                <h2 id="stockModalTitle">Adjust Stock</h2>
+                <p id="stockModalSubtitle">Select a product to adjust</p>
+            </div>
+
+            <button type="button"
+                    class="modal-close"
+                    id="closeStockModalBtn"
+                    aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+
+            <form action=""
+                  method="POST"
+                  id="stockForm">
+
+                <!-- Current stock summary -->
+                <div class="stock-summary">
+                    <span class="stock-summary-label">Current stock</span>
+                    <span class="stock-summary-value" id="currentStock">—</span>
+                </div>
+
+                <!-- Action selector -->
+                <div class="stock-action-group">
+                    <label class="stock-action-option">
+                        <input type="radio" name="action" value="in" checked>
+                        <div class="stock-action-content">
+                            <div class="stock-action-icon stock-in-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <strong>Stock In</strong>
+                                <span>Add units to inventory</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="stock-action-option">
+                        <input type="radio" name="action" value="out">
+                        <div class="stock-action-content">
+                            <div class="stock-action-icon stock-out-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <strong>Stock Out</strong>
+                                <span>Remove units from inventory</span>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Quantity input -->
+                <div class="form-field" style="margin-top: 18px;">
+                    <label for="quantityInput">Quantity</label>
+                    <input type="number"
+                           id="quantityInput"
+                           name="quantity"
+                           value="1"
+                           min="1"
+                           required>
+                </div>
+
+            </form>
+
+        </div>
+
+        <div class="modal-footer">
+            <button type="button"
+                    class="secondary-btn"
+                    id="cancelStockModalBtn">
+                Cancel
+            </button>
+
+            <button type="submit"
+                    class="primary-btn"
+                    form="stockForm">
+                Update Stock
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+/* ============================================================
+   SEARCH + FILTER
+   ============================================================ */
+
+const searchBox = document.getElementById('searchBox');
+const stockFilter = document.getElementById('stockFilter');
+const stockTable = document.getElementById('stockTable');
+
+function applyFilters() {
+    const q = searchBox.value.toLowerCase().trim();
+    const stock = stockFilter.value;
+
+    const rows = stockTable.querySelectorAll('tbody tr[data-name]');
+    let visible = 0;
+
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const rack = row.dataset.rack;
+        const stockState = row.dataset.stock;
+
+        const matchesSearch = !q || name.includes(q) || rack.includes(q);
+        const matchesStock = !stock || stockState === stock;
+
+        const show = matchesSearch && matchesStock;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+}
+
+searchBox.addEventListener('input', applyFilters);
+stockFilter.addEventListener('change', applyFilters);
+
+
+/* ============================================================
+   STOCK ADJUST MODAL
+   ============================================================ */
+
+const modal = document.getElementById('stockModal');
+const closeBtn = document.getElementById('closeStockModalBtn');
+const cancelBtn = document.getElementById('cancelStockModalBtn');
+const form = document.getElementById('stockForm');
+const subtitle = document.getElementById('stockModalSubtitle');
+const currentStock = document.getElementById('currentStock');
+const quantityInput = document.getElementById('quantityInput');
+
+function openModal(button) {
+    const id = button.dataset.id;
+    const name = button.dataset.name;
+    const qty = button.dataset.qty;
+
+    form.action = `/update-stock/${id}`;
+    subtitle.textContent = name;
+    currentStock.textContent = qty;
+    quantityInput.value = 1;
+
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => quantityInput.focus(), 100);
+}
+
+function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    form.reset();
+}
+
+document.querySelectorAll('.adjust-btn').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn));
+});
+
+closeBtn.addEventListener('click', closeModal);
+cancelBtn.addEventListener('click', closeModal);
+
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) {
+        closeModal();
+    }
+});
+</script>
+
+</body>
+</html>

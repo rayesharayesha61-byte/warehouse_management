@@ -1,0 +1,4 @@
+node_modules/ 
+.env 
+*.log 
+warehouse-management-f4342-firebase-adminsdk-*.json 
